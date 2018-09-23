@@ -126,11 +126,13 @@ struct Server {
 	);
 
 	std::list< Connection > connections;
+	//design choice I guess? refuse connects if list is longer than 2
 	SOCKET listen_socket = INVALID_SOCKET;
 };
 
 
 struct Client {
+	bool p1;
 	Client(std::string const &host, std::string const &port);
 
 	//poll() checks the status of the active connection and provides information to your callbacks:

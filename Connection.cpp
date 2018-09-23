@@ -71,10 +71,13 @@ void poll_connections(
 			#else
 			{
 			#endif
-				connections.emplace_back();
-				connections.back().socket = got;
-				std::cerr << "[" << where << "] client connected on " << connections.back().socket << "." << std::endl; //INFO
-				if (on_event) on_event(&connections.back(), Connection::OnOpen);
+				//only a 2 player game so foh if theres more than 2 players.
+				if (connections.size() < 2) {
+					connections.emplace_back();
+					connections.back().socket = got;
+					std::cerr << "[" << where << "] client connected on " << connections.back().socket << "." << std::endl; //INFO
+					if (on_event) on_event(&connections.back(), Connection::OnOpen);
+				}
 			}
 		}
 	}

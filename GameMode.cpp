@@ -29,6 +29,7 @@ Load< GLuint > meshes_for_vertex_color_program(LoadTagDefault, [](){
 });
 
 Scene::Transform *paddle_transform = nullptr;
+Scene::Transform *paddle_2_transform = nullptr;
 Scene::Transform *ball_transform = nullptr;
 
 Scene::Camera *camera = nullptr;
@@ -56,12 +57,17 @@ Load< Scene > scene(LoadTagDefault, [](){
 			if (paddle_transform) throw std::runtime_error("Multiple 'Paddle' transforms in scene.");
 			paddle_transform = t;
 		}
+		if (t->name == "Paddle_2") {
+			if (paddle_2_transform) throw std::runtime_error("Multiple 'Paddle_2' transforms in scene.");
+			paddle_2_transform = t;
+		}
 		if (t->name == "Ball") {
 			if (ball_transform) throw std::runtime_error("Multiple 'Ball' transforms in scene.");
 			ball_transform = t;
 		}
 	}
 	if (!paddle_transform) throw std::runtime_error("No 'Paddle' transform in scene.");
+	if (!paddle_2_transform) throw std::runtime_error("No 'Paddle_2' transform in scene.");
 	if (!ball_transform) throw std::runtime_error("No 'Ball' transform in scene.");
 
 	//look up the camera:
@@ -102,7 +108,13 @@ void GameMode::update(float elapsed) {
 
 	if (client.connection) {
 		//send game state to server:
-		client.connection.send_raw("s", 1);
+
+		//arbitrary choice of 2 players i guess idk servers
+		if (p1) {
+			client.connection.send_raw("s", 1);
+		} else  {
+			client.connection.send_raw("t", 1);
+		}
 		client.connection.send_raw(&state.paddle.x, sizeof(float));
 	}
 
@@ -112,15 +124,30 @@ void GameMode::update(float elapsed) {
 		} else if (event == Connection::OnClose) {
 			std::cerr << "Lost connection to server." << std::endl;
 		} else { assert(event == Connection::OnRecv);
-			std::cerr << "Ignoring " << c->recv_buffer.size() << " bytes from server." << std::endl;
+			if (c->recv_buffer[0] == 'b') {
+				memcpy(&p1, c->recv_buffer.data() + 1, sizeof(bool));
+				if (p1) std::cout << "Player 1" << std::endl;
+				else std::cout << "Player 2" << std::endl;
+			} else if (c->recv_buffer[0] == 'g'){
+				memcpy(&state.player_1.x, c->recv_buffer.data() + 1, sizeof(float));
+				memcpy(&state.player_2.x, c->recv_buffer.data() + 1 + sizeof(float), sizeof(float));
+			} else {
+				std::cerr << "Ignoring " << c->recv_buffer.size() << " bytes from server." << std::endl;
+			}
 			c->recv_buffer.clear();
 		}
-	});
-
+	}, 0.01);
 	//copy game state to scene positions:
 	ball_transform->position.x = state.ball.x;
 	ball_transform->position.y = state.ball.y;
 
+	if (p1) {
+		paddle_2_transform->position.x = state.player_2.x;
+		paddle_2_transform->position.y = state.player_2.y;
+	} else {
+		paddle_2_transform->position.x = state.player_1.x;
+		paddle_2_transform->position.y = state.player_1.y;
+	}
 	paddle_transform->position.x = state.paddle.x;
 	paddle_transform->position.y = state.paddle.y;
 }
