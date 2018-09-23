@@ -21,7 +21,7 @@
 
 
 Load< MeshBuffer > meshes(LoadTagDefault, [](){
-	return new MeshBuffer(data_path("paddle-ball.pnc"));
+	return new MeshBuffer(data_path("meshes.pnc"));
 });
 
 Load< GLuint > meshes_for_vertex_color_program(LoadTagDefault, [](){
@@ -37,7 +37,7 @@ Scene::Camera *camera = nullptr;
 Load< Scene > scene(LoadTagDefault, [](){
 	Scene *ret = new Scene;
 	//load transform hierarchy:
-	ret->load(data_path("paddle-ball.scene"), [](Scene &s, Scene::Transform *t, std::string const &m){
+	ret->load(data_path("meshes.scene"), [](Scene &s, Scene::Transform *t, std::string const &m){
 		Scene::Object *obj = s.new_object(t);
 
 		obj->program = vertex_color_program->program;
@@ -53,15 +53,15 @@ Load< Scene > scene(LoadTagDefault, [](){
 
 	//look up paddle and ball transforms:
 	for (Scene::Transform *t = ret->first_transform; t != nullptr; t = t->alloc_next) {
-		if (t->name == "Paddle") {
+		if (t->name == "Player_1") {
 			if (paddle_transform) throw std::runtime_error("Multiple 'Paddle' transforms in scene.");
 			paddle_transform = t;
 		}
-		if (t->name == "Paddle_2") {
+		if (t->name == "Player_2") {
 			if (paddle_2_transform) throw std::runtime_error("Multiple 'Paddle_2' transforms in scene.");
 			paddle_2_transform = t;
 		}
-		if (t->name == "Ball") {
+		if (t->name == "Hook") {
 			if (ball_transform) throw std::runtime_error("Multiple 'Ball' transforms in scene.");
 			ball_transform = t;
 		}
@@ -96,8 +96,8 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 	if (evt.type == SDL_MOUSEMOTION) {
 		state.paddle.x = (evt.motion.x - 0.5f * window_size.x) / (0.5f * window_size.x) * Game::FrameWidth;
-		state.paddle.x = std::max(state.paddle.x, -0.5f * Game::FrameWidth + 0.5f * Game::PaddleWidth);
-		state.paddle.x = std::min(state.paddle.x,  0.5f * Game::FrameWidth - 0.5f * Game::PaddleWidth);
+		state.paddle.x = std::max(state.paddle.x, -0.7f * Game::FrameWidth + 0.5f * Game::PaddleWidth);
+		state.paddle.x = std::min(state.paddle.x,  0.7f * Game::FrameWidth - 0.5f * Game::PaddleWidth);
 	}
 
 	return false;
@@ -155,7 +155,7 @@ void GameMode::update(float elapsed) {
 void GameMode::draw(glm::uvec2 const &drawable_size) {
 	camera->aspect = drawable_size.x / float(drawable_size.y);
 
-	glClearColor(0.25f, 0.0f, 0.5f, 0.0f);
+	glClearColor(0.95f, 0.66f, 0.25f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//set up basic OpenGL state:
@@ -167,9 +167,9 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
 	//set up light positions:
 	glUseProgram(vertex_color_program->program);
 
-	glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.81f, 0.81f, 0.76f)));
+	glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.99f, 0.99f, 0.99f)));
 	glUniform3fv(vertex_color_program->sun_direction_vec3, 1, glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
-	glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.3f)));
+	glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.95f, 0.66f, 0.25f)));
 	glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
 
 	scene->draw(camera);
