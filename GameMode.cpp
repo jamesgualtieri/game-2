@@ -32,6 +32,8 @@ Scene::Transform *paddle_transform = nullptr;
 Scene::Transform *paddle_2_transform = nullptr;
 Scene::Transform *ball_transform = nullptr;
 Scene::Transform *ball_transform_2 = nullptr;
+Scene::Transform *fish_transform = nullptr;
+Scene::Transform *crab_transform = nullptr;
 
 Scene::Camera *camera = nullptr;
 
@@ -70,11 +72,21 @@ Load< Scene > scene(LoadTagDefault, [](){
 			if (ball_transform) throw std::runtime_error("Multiple 'Ball' transforms in scene.");
 			ball_transform_2 = t;
 		}
+		if (t->name == "Crab") {
+			if (crab_transform) throw std::runtime_error("Multiple 'Crab' transforms in scene.");
+			crab_transform = t;
+		}
+		if (t->name == "Fish") {
+			if (fish_transform) throw std::runtime_error("Multiple 'Fish' transforms in scene.");
+			fish_transform = t;
+		}
 	}
 	if (!paddle_transform) throw std::runtime_error("No 'Paddle' transform in scene.");
 	if (!paddle_2_transform) throw std::runtime_error("No 'Paddle_2' transform in scene.");
 	if (!ball_transform) throw std::runtime_error("No 'Ball' transform in scene.");
 	if (!ball_transform_2) throw std::runtime_error("No 'Ball 2' transform in scene.");
+	if (!crab_transform) throw std::runtime_error("No 'Crab' transform in scene.");
+	if (!fish_transform) throw std::runtime_error("No 'Fish' transform in scene.");
 
 	//look up the camera:
 	for (Scene::Camera *c = ret->first_camera; c != nullptr; c = c->alloc_next) {
@@ -87,9 +99,24 @@ Load< Scene > scene(LoadTagDefault, [](){
 	return ret;
 });
 
+bool intersect(Scene::Transform *t1, Scene::Transform *t2){
+	float x1, y1, x2, y2;
+	float eps = 0.5f;
+	x1 = t1->position.x;
+	y1 = t1->position.y;
+	x2 = t2->position.x;
+	y2 = t2->position.y;
+	if (std::sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)) < eps) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 GameMode::GameMode(Client &client_) : client(client_) {
 	client.connection.send_raw("h", 1); //send a 'hello' to the server
-
+	fish_transform->position.x = 0.0f;
+	fish_transform->position.y = -3.0f;
 }
 
 GameMode::~GameMode() {
@@ -118,9 +145,11 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void GameMode::update(float elapsed) {
+	timer += elapsed;
 	state.update(elapsed);
 	paddle_transform -> position.y = 1.0f;
 	paddle_2_transform -> position.y = 1.0f;
+
 	if (client.connection) {
 		//send game state to server:
 
@@ -139,7 +168,8 @@ void GameMode::update(float elapsed) {
 			//probably won't get this.
 		} else if (event == Connection::OnClose) {
 			std::cerr << "Lost connection to server." << std::endl;
-		} else { assert(event == Connection::OnRecv);
+		} else { 
+			assert(event == Connection::OnRecv);
 			if (c->recv_buffer[0] == 'b') {
 				memcpy(&p1, c->recv_buffer.data() + 1, sizeof(bool));
 				if (p1) std::cout << "Player 1" << std::endl;
@@ -198,6 +228,23 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
 	glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
 
 	scene->draw(camera);
+
+
+	std::string p1_name = "PLAYER 1";
+	float height = 0.05f;
+	draw_text(p1_name, glm::vec2(-1.4f,0.92f), height, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	draw_text(p1_name, glm::vec2(-1.39f,0.91f), height, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	std::string p1_str = std::to_string(state.p1_score);
+	height = 0.1f;
+	draw_text(p1_str, glm::vec2(-1.4f,0.8f), height, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+	std::string p2_name = "PLAYER 2";
+	height = 0.05f;
+	draw_text(p2_name, glm::vec2(1.0f,0.92f), height, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+	draw_text(p2_name, glm::vec2(1.01f,0.91f), height, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	std::string p2_str = std::to_string(state.p2_score);
+	height = 0.1f;
+	draw_text(p2_str, glm::vec2(1.0f,0.8f), height, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
 
 	GL_ERRORS();
 }
