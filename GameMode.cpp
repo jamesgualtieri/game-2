@@ -31,6 +31,7 @@ Load< GLuint > meshes_for_vertex_color_program(LoadTagDefault, [](){
 Scene::Transform *paddle_transform = nullptr;
 Scene::Transform *paddle_2_transform = nullptr;
 Scene::Transform *ball_transform = nullptr;
+Scene::Transform *ball_transform_2 = nullptr;
 
 Scene::Camera *camera = nullptr;
 
@@ -65,10 +66,15 @@ Load< Scene > scene(LoadTagDefault, [](){
 			if (ball_transform) throw std::runtime_error("Multiple 'Ball' transforms in scene.");
 			ball_transform = t;
 		}
+		if (t->name == "Hook_2") {
+			if (ball_transform) throw std::runtime_error("Multiple 'Ball' transforms in scene.");
+			ball_transform_2 = t;
+		}
 	}
 	if (!paddle_transform) throw std::runtime_error("No 'Paddle' transform in scene.");
 	if (!paddle_2_transform) throw std::runtime_error("No 'Paddle_2' transform in scene.");
 	if (!ball_transform) throw std::runtime_error("No 'Ball' transform in scene.");
+	if (!ball_transform_2) throw std::runtime_error("No 'Ball 2' transform in scene.");
 
 	//look up the camera:
 	for (Scene::Camera *c = ret->first_camera; c != nullptr; c = c->alloc_next) {
@@ -83,6 +89,7 @@ Load< Scene > scene(LoadTagDefault, [](){
 
 GameMode::GameMode(Client &client_) : client(client_) {
 	client.connection.send_raw("h", 1); //send a 'hello' to the server
+
 }
 
 GameMode::~GameMode() {
@@ -100,12 +107,20 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		state.paddle.x = std::min(state.paddle.x,  0.7f * Game::FrameWidth - 0.5f * Game::PaddleWidth);
 	}
 
+	if (evt.key.keysym.scancode == SDL_SCANCODE_W) {
+		state.paddle.y += 0.4f * (evt.type == SDL_KEYDOWN);
+		return true;
+	} else if (evt.key.keysym.scancode == SDL_SCANCODE_S) {
+		state.paddle.y -= 0.4f * (evt.type == SDL_KEYDOWN);
+		return true;
+	} 
 	return false;
 }
 
 void GameMode::update(float elapsed) {
 	state.update(elapsed);
-
+	paddle_transform -> position.y = 1.0f;
+	paddle_2_transform -> position.y = 1.0f;
 	if (client.connection) {
 		//send game state to server:
 
@@ -116,6 +131,7 @@ void GameMode::update(float elapsed) {
 			client.connection.send_raw("t", 1);
 		}
 		client.connection.send_raw(&state.paddle.x, sizeof(float));
+		client.connection.send_raw(&state.paddle.y, sizeof(float));
 	}
 
 	client.poll([&](Connection *c, Connection::Event event){
@@ -130,26 +146,35 @@ void GameMode::update(float elapsed) {
 				else std::cout << "Player 2" << std::endl;
 			} else if (c->recv_buffer[0] == 'g'){
 				memcpy(&state.player_1.x, c->recv_buffer.data() + 1, sizeof(float));
-				memcpy(&state.player_2.x, c->recv_buffer.data() + 1 + sizeof(float), sizeof(float));
+				memcpy(&state.player_1.y, c->recv_buffer.data() + 1 + sizeof(float), sizeof(float));
+				memcpy(&state.player_2.x, c->recv_buffer.data() + 1 + (2 * sizeof(float)), sizeof(float));
+				memcpy(&state.player_2.y, c->recv_buffer.data() + 1 + (3 * sizeof(float)), sizeof(float));
 			} else {
 				std::cerr << "Ignoring " << c->recv_buffer.size() << " bytes from server." << std::endl;
 			}
 			c->recv_buffer.clear();
 		}
-	}, 0.01);
+	}, 0.05);
 	//copy game state to scene positions:
-	ball_transform->position.x = state.ball.x;
-	ball_transform->position.y = state.ball.y;
 
 	if (p1) {
+		paddle_transform->position.x = state.player_1.x;
+		ball_transform->position.x = state.player_1.x;
+		ball_transform->position.y = state.player_1.y;
+
 		paddle_2_transform->position.x = state.player_2.x;
-		paddle_2_transform->position.y = state.player_2.y;
+		ball_transform_2->position.x = state.player_2.x;
+		ball_transform_2->position.y = state.player_2.y;
 	} else {
+		paddle_transform->position.x = state.player_2.x;
+		ball_transform->position.x = state.player_2.x;
+		ball_transform->position.y = state.player_2.y;
+
+
 		paddle_2_transform->position.x = state.player_1.x;
-		paddle_2_transform->position.y = state.player_1.y;
+		ball_transform_2->position.x = state.player_1.x;
+		ball_transform_2->position.y = state.player_1.y;
 	}
-	paddle_transform->position.x = state.paddle.x;
-	paddle_transform->position.y = state.paddle.y;
 }
 
 void GameMode::draw(glm::uvec2 const &drawable_size) {

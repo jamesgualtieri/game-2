@@ -43,7 +43,8 @@ int main(int argc, char **argv) {
 						return; //wait for more data
 					} else {
 						memcpy(&state.player_1.x, c->recv_buffer.data() + 1, sizeof(float));
-						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + sizeof(float));
+						memcpy(&state.player_1.y, c->recv_buffer.data() + 1 + sizeof(float), sizeof(float));
+						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 2*sizeof(float));
 					}
 				} else if (c->recv_buffer[0] == 't') {
 					//player two position data ('t' for two I guess)
@@ -51,13 +52,16 @@ int main(int argc, char **argv) {
 						return; //wait for more data
 					} else {
 						memcpy(&state.player_2.x, c->recv_buffer.data() + 1, sizeof(float));
-						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + sizeof(float));
+						memcpy(&state.player_2.y, c->recv_buffer.data() + 1 + sizeof(float), sizeof(float));
+						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 2*sizeof(float));
 					}
 				}
-				c->send_raw("g", 1);
-				c->send_raw(&state.player_1.x, sizeof(float));
-				c->send_raw(&state.player_2.x, sizeof(float));
 			}
+			c->send_raw("g", 1);
+			c->send_raw(&state.player_1.x, sizeof(float));
+			c->send_raw(&state.player_1.y, sizeof(float));
+			c->send_raw(&state.player_2.x, sizeof(float));
+			c->send_raw(&state.player_2.y, sizeof(float));
 		}, 0.01);
 		//every second or so, dump the current paddle position:
 		static auto then = std::chrono::steady_clock::now();
