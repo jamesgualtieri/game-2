@@ -99,7 +99,7 @@ Load< Scene > scene(LoadTagDefault, [](){
 	return ret;
 });
 
-bool intersect(Scene::Transform *t1, Scene::Transform *t2){
+bool intersect(Scene::Transform *t1, Scene::Transform *t2) {
 	float x1, y1, x2, y2;
 	float eps = 0.5f;
 	x1 = t1->position.x;
@@ -113,10 +113,21 @@ bool intersect(Scene::Transform *t1, Scene::Transform *t2){
 	}
 }
 
+void GameMode::new_fish() {
+	state.fish.x = 0.0f;
+	state.fish.y = -3.0f;
+	fish_transform->position.x = 0.0f;
+	fish_transform->position.y = -3.0f;
+	state.fish_owner = 0;
+}
+
 GameMode::GameMode(Client &client_) : client(client_) {
 	client.connection.send_raw("h", 1); //send a 'hello' to the server
 	fish_transform->position.x = 0.0f;
 	fish_transform->position.y = -3.0f;
+
+	paddle_transform -> position.y = 1.0f;
+	paddle_2_transform -> position.y = 1.0f;
 }
 
 GameMode::~GameMode() {
@@ -147,8 +158,22 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 void GameMode::update(float elapsed) {
 	timer += elapsed;
 	state.update(elapsed);
-	paddle_transform -> position.y = 1.0f;
-	paddle_2_transform -> position.y = 1.0f;
+
+	if (intersect(ball_transform, fish_transform)){
+		state.fish_owner = (p1)?1:2;
+	} else if (intersect(ball_transform_2, fish_transform)){
+		state.fish_owner = (p1)?2:1;
+	} 
+
+	if (state.fish_owner == 1) {
+		if ((p1 && intersect(fish_transform, paddle_transform)) ||
+			intersect(fish_transform, paddle_2_transform)) {
+			if (p1) state.p1_score += 10;
+			else state.p2_score += 10;
+		}
+	} else if (state.fish_owner == 2) {
+
+	}
 
 	if (client.connection) {
 		//send game state to server:
@@ -161,6 +186,9 @@ void GameMode::update(float elapsed) {
 		}
 		client.connection.send_raw(&state.paddle.x, sizeof(float));
 		client.connection.send_raw(&state.paddle.y, sizeof(float));
+		if (p1) client.connection.send_raw(&state.p1_score, sizeof(float));
+		else client.connection.send_raw(&state.p2_score, sizeof(float));
+		client.connection.send_raw(&state.fish_owner, sizeof(float));
 	}
 
 	client.poll([&](Connection *c, Connection::Event event){
@@ -176,9 +204,14 @@ void GameMode::update(float elapsed) {
 				else std::cout << "Player 2" << std::endl;
 			} else if (c->recv_buffer[0] == 'g'){
 				memcpy(&state.player_1.x, c->recv_buffer.data() + 1, sizeof(float));
-				memcpy(&state.player_1.y, c->recv_buffer.data() + 1 + sizeof(float), sizeof(float));
-				memcpy(&state.player_2.x, c->recv_buffer.data() + 1 + (2 * sizeof(float)), sizeof(float));
-				memcpy(&state.player_2.y, c->recv_buffer.data() + 1 + (3 * sizeof(float)), sizeof(float));
+				memcpy(&state.player_1.y, c->recv_buffer.data() + 1 + sizeof(float), 						sizeof(float));
+				memcpy(&state.player_2.x, c->recv_buffer.data() + 1 + (2 * sizeof(float)), 					sizeof(float));
+				memcpy(&state.player_2.y, c->recv_buffer.data() + 1 + (3 * sizeof(float)), 					sizeof(float));
+				memcpy(&state.fish.x, 		c->recv_buffer.data() + 1 + (4 * sizeof(float)), 				sizeof(float));
+				memcpy(&state.fish.y, 		c->recv_buffer.data() + 1 + (5 * sizeof(float)), 				sizeof(float));
+				memcpy(&state.fish_owner,	c->recv_buffer.data() + 1 + (6 * sizeof(float)), 				sizeof(int));
+				memcpy(&state.p1_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + 	sizeof(int), sizeof(int));
+				memcpy(&state.p2_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + 2*sizeof(int), sizeof(int));
 			} else {
 				std::cerr << "Ignoring " << c->recv_buffer.size() << " bytes from server." << std::endl;
 			}
@@ -205,6 +238,8 @@ void GameMode::update(float elapsed) {
 		ball_transform_2->position.x = state.player_1.x;
 		ball_transform_2->position.y = state.player_1.y;
 	}
+	fish_transform->position.x = state.fish.x;
+	fish_transform->position.y = state.fish.y;
 }
 
 void GameMode::draw(glm::uvec2 const &drawable_size) {
@@ -234,17 +269,29 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
 	float height = 0.05f;
 	draw_text(p1_name, glm::vec2(-1.4f,0.92f), height, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
 	draw_text(p1_name, glm::vec2(-1.39f,0.91f), height, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	std::string p1_str = std::to_string(state.p1_score);
-	height = 0.1f;
-	draw_text(p1_str, glm::vec2(-1.4f,0.8f), height, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-
 	std::string p2_name = "PLAYER 2";
 	height = 0.05f;
 	draw_text(p2_name, glm::vec2(1.0f,0.92f), height, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
 	draw_text(p2_name, glm::vec2(1.01f,0.91f), height, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	std::string p2_str = std::to_string(state.p2_score);
-	height = 0.1f;
-	draw_text(p2_str, glm::vec2(1.0f,0.8f), height, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+
+	if (p1) {
+		//i was running out of time give me a break
+		std::string p1_str = std::to_string(state.p1_score);
+		height = 0.1f;
+		draw_text(p1_str, glm::vec2(-1.4f,0.8f), height, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+		std::string p2_str = std::to_string(state.p2_score);
+		height = 0.1f;
+		draw_text(p2_str, glm::vec2(1.0f,0.8f), height, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+	} else {
+		std::string p1_str = std::to_string(state.p2_score);
+		height = 0.1f;
+		draw_text(p1_str, glm::vec2(-1.4f,0.8f), height, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+		std::string p2_str = std::to_string(state.p1_score);
+		height = 0.1f;
+		draw_text(p2_str, glm::vec2(1.0f,0.8f), height, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+	}
 
 	GL_ERRORS();
 }

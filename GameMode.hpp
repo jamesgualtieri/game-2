@@ -30,6 +30,9 @@ struct GameMode : public Mode {
 	//draw is called after update:
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
+	//gen a new fish
+	virtual void new_fish();
+
 	//------- game state -------
 	Game state;
 	bool p1 = false;
