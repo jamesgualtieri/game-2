@@ -99,32 +99,9 @@ Load< Scene > scene(LoadTagDefault, [](){
 	return ret;
 });
 
-bool intersect(Scene::Transform *t1, Scene::Transform *t2) {
-	float x1, y1, x2, y2;
-	float eps = 0.5f;
-	x1 = t1->position.x;
-	y1 = t1->position.y;
-	x2 = t2->position.x;
-	y2 = t2->position.y;
-	if (std::sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)) < eps) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-void GameMode::new_fish() {
-	state.fish.x = 0.0f;
-	state.fish.y = -3.0f;
-	fish_transform->position.x = 0.0f;
-	fish_transform->position.y = -3.0f;
-	state.fish_owner = 0;
-}
 
 GameMode::GameMode(Client &client_) : client(client_) {
 	client.connection.send_raw("h", 1); //send a 'hello' to the server
-	fish_transform->position.x = 0.0f;
-	fish_transform->position.y = -3.0f;
 
 	paddle_transform -> position.y = 1.0f;
 	paddle_2_transform -> position.y = 1.0f;
@@ -145,11 +122,11 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		state.paddle.x = std::min(state.paddle.x,  0.7f * Game::FrameWidth - 0.5f * Game::PaddleWidth);
 	}
 
-	if (evt.key.keysym.scancode == SDL_SCANCODE_W) {
-		state.paddle.y += 0.4f * (evt.type == SDL_KEYDOWN);
+	if (evt.key.keysym.scancode == SDL_SCANCODE_W && state.paddle.y < 1.0f) {
+		state.paddle.y += 0.5f * (evt.type == SDL_KEYDOWN);
 		return true;
-	} else if (evt.key.keysym.scancode == SDL_SCANCODE_S) {
-		state.paddle.y -= 0.4f * (evt.type == SDL_KEYDOWN);
+	} else if (evt.key.keysym.scancode == SDL_SCANCODE_S && state.paddle.y > -4.0f) {
+		state.paddle.y -= 0.5f * (evt.type == SDL_KEYDOWN);
 		return true;
 	} 
 	return false;
@@ -158,22 +135,6 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 void GameMode::update(float elapsed) {
 	timer += elapsed;
 	state.update(elapsed);
-
-	if (intersect(ball_transform, fish_transform)){
-		state.fish_owner = (p1)?1:2;
-	} else if (intersect(ball_transform_2, fish_transform)){
-		state.fish_owner = (p1)?2:1;
-	} 
-
-	if (state.fish_owner == 1) {
-		if ((p1 && intersect(fish_transform, paddle_transform)) ||
-			intersect(fish_transform, paddle_2_transform)) {
-			if (p1) state.p1_score += 10;
-			else state.p2_score += 10;
-		}
-	} else if (state.fish_owner == 2) {
-
-	}
 
 	if (client.connection) {
 		//send game state to server:
@@ -186,9 +147,6 @@ void GameMode::update(float elapsed) {
 		}
 		client.connection.send_raw(&state.paddle.x, sizeof(float));
 		client.connection.send_raw(&state.paddle.y, sizeof(float));
-		if (p1) client.connection.send_raw(&state.p1_score, sizeof(float));
-		else client.connection.send_raw(&state.p2_score, sizeof(float));
-		client.connection.send_raw(&state.fish_owner, sizeof(float));
 	}
 
 	client.poll([&](Connection *c, Connection::Event event){
@@ -202,22 +160,27 @@ void GameMode::update(float elapsed) {
 				memcpy(&p1, c->recv_buffer.data() + 1, sizeof(bool));
 				if (p1) std::cout << "Player 1" << std::endl;
 				else std::cout << "Player 2" << std::endl;
+				c->recv_buffer.clear();
 			} else if (c->recv_buffer[0] == 'g'){
-				memcpy(&state.player_1.x, c->recv_buffer.data() + 1, sizeof(float));
-				memcpy(&state.player_1.y, c->recv_buffer.data() + 1 + sizeof(float), 						sizeof(float));
-				memcpy(&state.player_2.x, c->recv_buffer.data() + 1 + (2 * sizeof(float)), 					sizeof(float));
-				memcpy(&state.player_2.y, c->recv_buffer.data() + 1 + (3 * sizeof(float)), 					sizeof(float));
-				memcpy(&state.fish.x, 		c->recv_buffer.data() + 1 + (4 * sizeof(float)), 				sizeof(float));
-				memcpy(&state.fish.y, 		c->recv_buffer.data() + 1 + (5 * sizeof(float)), 				sizeof(float));
-				memcpy(&state.fish_owner,	c->recv_buffer.data() + 1 + (6 * sizeof(float)), 				sizeof(int));
-				memcpy(&state.p1_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + 	sizeof(int), sizeof(int));
-				memcpy(&state.p2_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + 2*sizeof(int), sizeof(int));
+				if (c->recv_buffer.size() < (1 + 6 * sizeof(float) + 3 * sizeof(int) )) {
+					return; //wait for more data
+				} else {
+					memcpy(&state.player_1.x, 	c->recv_buffer.data() + 1, 						 					sizeof(float));
+					memcpy(&state.player_1.y, 	c->recv_buffer.data() + 1 + sizeof(float), 		 					sizeof(float));
+					memcpy(&state.player_2.x, 	c->recv_buffer.data() + 1 + (2 * sizeof(float)), 					sizeof(float));
+					memcpy(&state.player_2.y, 	c->recv_buffer.data() + 1 + (3 * sizeof(float)),		 			sizeof(float));
+					memcpy(&state.fish.x, 		c->recv_buffer.data() + 1 + (4 * sizeof(float)), 					sizeof(float));
+					memcpy(&state.fish.y, 		c->recv_buffer.data() + 1 + (5 * sizeof(float)), 					sizeof(float));
+					memcpy(&state.fish_owner,	c->recv_buffer.data() + 1 + (6 * sizeof(float)), 					sizeof(int));
+					memcpy(&state.p1_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + sizeof(int),		sizeof(int));
+					memcpy(&state.p2_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + 2 * sizeof(int), 	sizeof(int));
+					c->recv_buffer.clear();
+				}
 			} else {
 				std::cerr << "Ignoring " << c->recv_buffer.size() << " bytes from server." << std::endl;
 			}
-			c->recv_buffer.clear();
 		}
-	}, 0.05);
+	}, 0.1);
 	//copy game state to scene positions:
 
 	if (p1) {
@@ -238,6 +201,7 @@ void GameMode::update(float elapsed) {
 		ball_transform_2->position.x = state.player_1.x;
 		ball_transform_2->position.y = state.player_1.y;
 	}
+
 	fish_transform->position.x = state.fish.x;
 	fish_transform->position.y = state.fish.y;
 }

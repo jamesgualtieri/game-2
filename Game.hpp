@@ -18,6 +18,7 @@ struct Game {
 	
     int p1_score = 0;
     int p2_score = 0;
+    int dir = 1;
 
     void update(float time);
 	static constexpr const float FrameWidth = 10.0f;
