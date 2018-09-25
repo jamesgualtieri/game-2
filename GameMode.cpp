@@ -2,6 +2,7 @@
 
 #include "MenuMode.hpp"
 #include "Load.hpp"
+#include "Sound.hpp"
 #include "MeshBuffer.hpp"
 #include "Scene.hpp"
 #include "gl_errors.hpp" //helper for dumpping OpenGL error messages
@@ -26,6 +27,10 @@ Load< MeshBuffer > meshes(LoadTagDefault, [](){
 
 Load< GLuint > meshes_for_vertex_color_program(LoadTagDefault, [](){
 	return new GLuint(meshes->make_vao_for_program(vertex_color_program->program));
+});
+
+Load< Sound::Sample > sample_loop(LoadTagDefault, [](){
+	return new Sound::Sample(data_path("loop.wav"));
 });
 
 Scene::Transform *paddle_transform = nullptr;
@@ -105,6 +110,8 @@ GameMode::GameMode(Client &client_) : client(client_) {
 
 	paddle_transform -> position.y = 1.0f;
 	paddle_2_transform -> position.y = 1.0f;
+
+	loop = sample_loop->play(glm::vec3(0.0f,0.0f,0.0f), 1.0f, Sound::Loop);
 }
 
 GameMode::~GameMode() {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Mode.hpp"
-
+#include "Sound.hpp"
 #include "MeshBuffer.hpp"
 #include "GL.hpp"
 #include "Connection.hpp"
@@ -36,4 +36,6 @@ struct GameMode : public Mode {
 	bool over = false;
 	//------ networking ------
 	Client &client; //client object; manages connection to server.
+
+	std::shared_ptr< Sound::PlayingSample > loop;
 };
