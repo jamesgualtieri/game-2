@@ -2,7 +2,6 @@
 
 #include "MenuMode.hpp"
 #include "Load.hpp"
-#include "Sound.hpp"
 #include "MeshBuffer.hpp"
 #include "Scene.hpp"
 #include "gl_errors.hpp" //helper for dumpping OpenGL error messages
@@ -115,6 +114,7 @@ GameMode::GameMode(Client &client_) : client(client_) {
 }
 
 GameMode::~GameMode() {
+	if (loop) loop->stop();
 }
 
 bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
