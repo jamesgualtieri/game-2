@@ -1,11 +1,10 @@
 # Game Information
-(Note: fill in this portion with information about your game.)
 
 Title: (TODO: your game's title)
 
 Author: (TODO: your name)
 
-Design Document: [TODO: name of design document](TODO: link to design document)
+Design Document: [Fish Off](https://github.com/jamesgualtieri/game2-design)
 
 Screen Shot:
 

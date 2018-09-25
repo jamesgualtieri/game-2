@@ -76,17 +76,17 @@ int main(int argc, char **argv) {
 					}
 				} 
 			}
-			if (intersect(state.fish.x, state.fish.y, state.player_1.x, state.player_1.y)) {
+			if (intersect(state.fish.x, state.fish.y, state.player_1.x, state.player_1.y - 1.0f)) {
 				state.fish_owner = 1;
-			} else if (intersect(state.fish.x, state.fish.y, state.player_2.x, state.player_2.y)) {
+			} else if (intersect(state.fish.x, state.fish.y, state.player_2.x, state.player_2.y - 1.0f)) {
 				state.fish_owner = 2;
 			} 
 
 			if (state.fish_owner == 1){
 				state.fish.x = state.player_1.x;
-				state.fish.y = state.player_1.y;
-
-				if (state.fish.y == 1.0f){
+				state.fish.y = state.player_1.y - 1.0f;
+				state.dir = 0;
+				if (state.fish.y == 0.0f){
 					std::cout << "before " << state.fish.x << std::endl;
 					state.p1_score += 10;
 					new_fish(&state);
@@ -95,9 +95,9 @@ int main(int argc, char **argv) {
 				}
 			} else if (state.fish_owner == 2){
 				state.fish.x = state.player_2.x;
-				state.fish.y = state.player_2.y;
-
-				if (state.fish.y == 1.0f){
+				state.fish.y = state.player_2.y - 1.0f;
+				state.dir = 0; //vertical I guess? 
+				if (state.fish.y == 0.0f){
 					//top of the boat i guess
 					state.p2_score += 10;
 					std::cout << "before " << state.fish_owner << std::endl;
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 					std::cout << "after " << state.fish_owner << std::endl;
 				}
 			} else {
-				state.fish.x += state.dir * 0.05f;
+				state.fish.x += state.dir * 0.03f;
 				if (state.fish.x > 10.0f || state.fish.x < -10.0f) {
 					new_fish(&state);
 				}
@@ -123,7 +123,9 @@ int main(int argc, char **argv) {
 			c->send_raw(&state.p1_score, sizeof(int));
 			c->send_raw(&state.p2_score, sizeof(int));
 			c->send_raw(&state.dir, sizeof(int));
-		}, 0.1);
+			c->send_raw(&state.time
+				, sizeof(float));
+		}, 1.0);
 		//every second or so, dump the current paddle position:
 		static auto then = std::chrono::steady_clock::now();
 		auto now = std::chrono::steady_clock::now();

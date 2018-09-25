@@ -133,7 +133,6 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void GameMode::update(float elapsed) {
-	timer += elapsed;
 	state.update(elapsed);
 
 	if (client.connection) {
@@ -162,7 +161,7 @@ void GameMode::update(float elapsed) {
 				else std::cout << "Player 2" << std::endl;
 				c->recv_buffer.clear();
 			} else if (c->recv_buffer[0] == 'g'){
-				if (c->recv_buffer.size() < (1 + 6 * sizeof(float) + 3 * sizeof(int) )) {
+				if (c->recv_buffer.size() < (1 + 6 * sizeof(float) + 4 * sizeof(int) )) {
 					return; //wait for more data
 				} else {
 					memcpy(&state.player_1.x, 	c->recv_buffer.data() + 1, 						 					sizeof(float));
@@ -174,6 +173,7 @@ void GameMode::update(float elapsed) {
 					memcpy(&state.fish_owner,	c->recv_buffer.data() + 1 + (6 * sizeof(float)), 					sizeof(int));
 					memcpy(&state.p1_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + sizeof(int),		sizeof(int));
 					memcpy(&state.p2_score, 	c->recv_buffer.data() + 1 + (6 * sizeof(float)) + 2 * sizeof(int), 	sizeof(int));
+					memcpy(&state.dir, 			c->recv_buffer.data() + 1 + (6 * sizeof(float)) + 3 * sizeof(int), 	sizeof(int));
 					c->recv_buffer.clear();
 				}
 			} else {
@@ -182,8 +182,10 @@ void GameMode::update(float elapsed) {
 		}
 	}, 0.1);
 	//copy game state to scene positions:
-
-	if (p1) {
+	if (state.p1_score == 200 || state.p2_score == 200) {
+		over = true;
+	}
+	if (p1 && !over) {
 		paddle_transform->position.x = state.player_1.x;
 		ball_transform->position.x = state.player_1.x;
 		ball_transform->position.y = state.player_1.y;
@@ -191,19 +193,33 @@ void GameMode::update(float elapsed) {
 		paddle_2_transform->position.x = state.player_2.x;
 		ball_transform_2->position.x = state.player_2.x;
 		ball_transform_2->position.y = state.player_2.y;
-	} else {
+	} else if (!over){
 		paddle_transform->position.x = state.player_2.x;
 		ball_transform->position.x = state.player_2.x;
 		ball_transform->position.y = state.player_2.y;
-
 
 		paddle_2_transform->position.x = state.player_1.x;
 		ball_transform_2->position.x = state.player_1.x;
 		ball_transform_2->position.y = state.player_1.y;
 	}
 
-	fish_transform->position.x = state.fish.x;
-	fish_transform->position.y = state.fish.y;
+	if (!over){
+		fish_transform->position.x = state.fish.x;
+		fish_transform->position.y = state.fish.y;
+		glm::vec3 up = glm::vec3 (0.0f, 0.0f, 1.0f);
+		glm::vec3 left = glm::vec3 (0.0f, 1.0f, 0.0f);
+		glm::vec3 top = glm::vec3 (1.0f, 0.0f, 0.0f);
+		if (state.dir == 1) {
+			fish_transform -> rotation = glm::normalize(glm::angleAxis(0.0f, left) * 
+				glm::angleAxis(float(-M_PI/2.0f), top));
+		} else if (state.dir == -1) {
+			fish_transform -> rotation = glm::normalize(glm::angleAxis(float(-M_PI), left)* 
+				glm::angleAxis(float(-M_PI/2.0f), top));
+		} else if (state.dir == 0) {
+			fish_transform -> rotation = glm::normalize(glm::angleAxis(float(M_PI/2.0f), up));
+		}
+	}
+		
 }
 
 void GameMode::draw(glm::uvec2 const &drawable_size) {
@@ -255,6 +271,15 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
 		std::string p2_str = std::to_string(state.p1_score);
 		height = 0.1f;
 		draw_text(p2_str, glm::vec2(1.0f,0.8f), height, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+	}
+	if (over && ((state.p1_score == 200 && p1) || (state.p2_score == 200 && !p1))) {
+		std::string end_str = "YOU WIN!";
+		height = 0.1f;
+		draw_text(end_str, glm::vec2(-0.5f,0.8f), height, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	} else if (over) {
+		std::string end_str = "YOU LOSE!";
+		height = 0.1f;
+		draw_text(end_str, glm::vec2(-0.5f,0.8f), height, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	}
 
 	GL_ERRORS();

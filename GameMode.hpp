@@ -33,7 +33,7 @@ struct GameMode : public Mode {
 	//------- game state -------
 	Game state;
 	bool p1 = false;
-	float timer = 0.0f;
+	bool over = false;
 	//------ networking ------
 	Client &client; //client object; manages connection to server.
 };
