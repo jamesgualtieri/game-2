@@ -1,8 +1,8 @@
 # Game Information
 
-Title: (TODO: your game's title)
+Title: Fish Off
 
-Author: (TODO: your name)
+Author: James Gualtieri
 
 Design Document: [Fish Off](https://github.com/jamesgualtieri/game2-design)
 
@@ -12,45 +12,16 @@ Screen Shot:
 
 How To Play:
 
-TODO: describe the controls and (if needed) goals/strategy.
+Move the character left and right witht the mouse, move the fishing lure up and down using the W and S keys respectfully.
 
 Changes From The Design Document:
 
-TODO: what did you need to add/remove/modify from the original design? Why?
+I removed the crab hazard from the design document because I did not have the time to add it properly.
 
 Good / Bad / Ugly Code:
 
-TODO: provide examples of code you wrote from this project that you think is good (elegant, simple, useful), bad (hack-y, brittle, unreadable), and ugly (particularly inelegant). Provide a sentence or two of justification for the examples.
+I think I managed to use the server interface pretty well, not noticing any issues when running two instances of the game side by side. However, i don't think that the use of the Scene loading was done in the intended or in an interesting way, but hey, it works right?
 
-# Using This Base Code
-
-Before you dive into the code, it helps to understand the overall structure of this repository.
-- Files you should read and/or edit:
-    - ```main.cpp``` creates the game window and contains the main loop. You should read through this file to understand what it's doing, but you shouldn't need to change things (other than window title, size, and maybe the initial Mode).
-    - ```server.cpp``` creates a basic server.
-    - ```GameMode.*pp``` declaration+definition for the GameMode, a basic scene-based game mode.
-    - ```meshes/export-meshes.py``` exports meshes from a .blend file into a format usable by our game runtime.
-    - ```meshes/export-walkmeshes.py``` exports meshes from a given layer of a .blend file into a format usable by the WalkMeshes loading code.
-    - ```meshes/export-scene.py``` exports the transform hierarchy of a blender scene to a file.
-	- ```Connection.*pp``` networking code.
-    - ```Jamfile``` responsible for telling FTJam how to build the project. If you add any additional .cpp files or want to change the name of your runtime executable you will need to modify this.
-    - ```.gitignore``` ignores the ```objs/``` directory and the generated executable file. You will need to change it if your executable name changes. (If you find yourself changing it to ignore, e.g., your editor's swap files you should probably, instead be investigating making this change in the global git configuration.)
-- Files you should read the header for (and use):
-	- ```Sound.*pp``` spatial sound code.
-    - ```WalkMesh.*pp``` code to load and walk on walkmeshes.
-    - ```MenuMode.hpp``` presents a menu with configurable choices. Can optionally display another mode in the background.
-    - ```Scene.hpp``` scene graph implementation, including loading code.
-    - ```Mode.hpp``` base class for modes (things that recieve events and draw).
-    - ```Load.hpp``` asset loading system. Very useful for OpenGL assets.
-    - ```MeshBuffer.hpp``` code to load mesh data in a variety of formats (and create vertex array objects to bind it to program attributes).
-    - ```data_path.hpp``` contains a helper function that allows you to specify paths relative to the executable (instead of the current working directory). Very useful when loading assets.
-    - ```draw_text.hpp``` draws text (limited to capital letters + *) to the screen.
-    - ```compile_program.hpp``` compiles OpenGL shader programs.
-    - ```load_save_png.hpp``` load and save PNG images.
-- Files you probably don't need to read or edit:
-    - ```GL.hpp``` includes OpenGL prototypes without the namespace pollution of (e.g.) SDL's OpenGL header. It makes use of ```glcorearb.h``` and ```gl_shims.*pp``` to make this happen.
-    - ```make-gl-shims.py``` does what it says on the tin. Included in case you are curious. You won't need to run it.
-    - ```read_chunk.hpp``` contains a function that reads a vector of structures prefixed by a magic number. It's surprising how many simple file formats you can create that only require such a function to access.
 
 ## Asset Build Instructions
 
@@ -112,3 +83,13 @@ jam
 ```
 
 That's it. You can use ```jam -jN``` to run ```N``` parallel jobs if you'd like; ```jam -q``` to instruct jam to quit after the first error; ```jam -dx``` to show commands being executed; or ```jam main.o``` to build a specific file (in this case, main.cpp).  ```jam -h``` will print help on additional options.
+
+The jam command builds two executables, a ```server``` and a ```client``` executable in the ```/dist/``` directory.
+
+The server executable usage is as follows: 
+```./server <port>```
+with a proper port number
+
+The client executable usage is as follows: 
+```./client <host> <port>```
+with a proper host (where the server is runnint) and port number (e.g. running on same computer can be done by using `localhost`)
